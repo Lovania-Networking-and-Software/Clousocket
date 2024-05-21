@@ -7,7 +7,9 @@ import time
 
 import sentry_sdk
 
-from src.errors import DeadSignalError
+
+class HeatbeatTimeoutError(Exception):
+    pass
 
 
 class HeartbeatBase:
@@ -56,16 +58,15 @@ class Session:
         self.loop.run_until_complete(self.basis())
 
     async def basis(self):
-        try:
-            async with self.consular as cnslr:
+        async with self.consular as cnslr:
+            try:
                 async with asyncio.TaskGroup() as tg:
                     cnslr.add_task(tg.create_task(self.heartbeat()))
                     cnslr.add_task(tg.create_task(self.io()))
+            except HeatbeatTimeoutError:
+                await self.loop.sock_sendto(self.proto, bytes(json.dumps({"op": 121}), "utf-8"), self.addr)
+            finally:
                 self.proto.close()
-        except TimeoutError:
-            self.proto.close()
-        except DeadSignalError:
-            return None
 
     async def heartbeat(self):
         while True:
@@ -84,7 +85,7 @@ class Session:
                     self.heartbeat_future = self.loop.create_future()
             except TimeoutError:
                 break
-        raise TimeoutError("Heartbeat timed out")
+        raise asyncio.CancelledError("Heartbeat timed out")
 
     async def io(self):
         while True:
@@ -94,7 +95,16 @@ class Session:
                     break
                 with sentry_sdk.start_span(op="serialize", description="Convert bytes to JSON") as spn:
                     ts = time.perf_counter_ns()
-                    message = json.loads(message.decode('utf-8'))
+                    try:
+                        message = json.loads(message.decode('utf-8'))
+                    except json.decoder.JSONDecodeError as err:
+                        await self.loop.sock_sendto(self.proto, bytes(json.dumps({"op": 101,
+                                                                                  "d" : {
+                                                                                      "error": str(err)
+                                                                                  }}),
+                                                                      "utf-8"),
+                                                    self.addr)
+                        continue
                     te = time.perf_counter_ns()
                     spn.set_measurement("serialization", (te - ts) / 1000000, "miliseconds")
                 if message["op"] == 0:
