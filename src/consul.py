@@ -26,7 +26,7 @@ class SupremeConsul:
 
     async def __aenter__(self):
         self.config = configparser.ConfigParser()
-        self.config.read('clousocket.conf')
+        self.config.read('../clousocket.conf')
 
         self.host = self.config["NETWORK"]["HOST"]
         self.port = int(self.config["NETWORK"]["PORT"])
