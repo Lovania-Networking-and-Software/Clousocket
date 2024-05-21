@@ -8,8 +8,6 @@ from typing import AsyncIterator
 import redis.asyncio as redis
 import sentry_sdk
 
-from src.errors import DeadSignalError
-
 
 class EndOfStream(Exception):
     pass
@@ -33,59 +31,6 @@ class IOQueue:
     async def recv_io_stream(self):
         res = self.queue.get()
         return res
-
-
-class DeadPubSub:
-    def __init__(self, consul, dead_channel):
-        self.consul = consul
-        self.loop = asyncio.get_running_loop()
-        self.redis_psc = redis.Redis(host=self.consul.config["REDIS"]["Endpoint"], port=int(self.consul.config["REDIS"][
-                                                                                                "Port"]),
-                                     password=self.consul.config["REDIS"]["Password"], decode_responses=True)
-        self.client = self.redis_psc.pubsub()
-        self.dead_channel = dead_channel
-        self.thread = threading.Thread(target=self.between_callback, daemon=True)
-        self.is_dead = False
-        self.lock = asyncio.Condition()
-
-    async def kill(self):
-        await self.client.aclose()
-        await self.redis_psc.aclose()
-        del self.client
-        del self.redis_psc
-
-    async def wait_for_dead(self):
-        await self.lock.acquire()
-        await self.lock.wait()
-        self.lock.release()
-
-    async def alias(self):
-        await self.loop.create_task(self.wait_for_dead())
-
-    def start(self):
-        self.thread.start()
-
-    def between_callback(self):
-        return asyncio.run(self.worker())
-
-    async def signal(self):
-        await self.client.subscribe(self.dead_channel)
-        await self.redis_psc.publish(self.dead_channel, "DEAD")
-
-    async def worker(self):
-        await self.client.subscribe(self.dead_channel)
-        async for message in self.client.listen():
-            if message is None:
-                continue
-            elif message["data"] == 1:
-                continue
-            elif message["data"] == "DEAD":
-                self.is_dead = True
-                break
-        print(self.lock.locked())
-        await self.lock.acquire()
-        self.lock.notify_all()
-        self.lock.release()
 
 
 class RedisTPCS:
@@ -148,6 +93,3 @@ class RedisTPCS:
                     await pool.disconnect(True)
                     self.in_queue.task_done()
                     trs.set_tag("command", comm.split(" ")[0])
-                    message = self.consul.dead_pubsub.is_dead
-                    if message:
-                        raise DeadSignalError()

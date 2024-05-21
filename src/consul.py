@@ -9,7 +9,6 @@ from sentry_sdk.integrations.socket import SocketIntegration
 
 from src import red_db, session_structure
 from src.errors import Execution
-from src.red_db import DeadPubSub
 
 
 class SupremeConsul:
@@ -43,19 +42,12 @@ class SupremeConsul:
             ]
         )
 
-        self.dead_pubsub = DeadPubSub(self, dead_channel=self.dead_channel)
-        self.dead_pubsub.start()
-
-        loop = asyncio.get_running_loop()
-        _ = loop.create_task(self.check_dead_signal())
-
         self.db = red_db.RedisTPCS(self)
         self.db.start()
 
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.dead_pubsub.signal()
         sentry_sdk.get_client().close()
 
     async def __aiter__(self):
@@ -66,13 +58,7 @@ class SupremeConsul:
                 sentry_sdk.capture_exception(e)
                 raise e
 
-    async def check_dead_signal(self):
-        await self.dead_pubsub.wait_for_dead()
-        await self.dead_pubsub.kill()
-
     async def io(self):
-        if self.dead_signal.is_set():
-            asyncio.current_task(self.loop).cancel()
         return self
 
     async def create_session(self, sck: socket.socket, addr):
@@ -90,18 +76,10 @@ class Consular:
         self.consul = consul
         self.tasks: list[asyncio.Task] = list[asyncio.Task]()
 
-    async def check_redis_dead_signal(self):
-        await self.consul.dead_pubsub.alias()
-        for task in self.tasks:
-            task.cancel()
-
     def add_task(self, task):
         self.tasks.append(task)
 
     async def __aenter__(self):
-        loop = asyncio.get_running_loop()
-        _ = loop.create_task(self.check_redis_dead_signal())
-        print("a")
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
