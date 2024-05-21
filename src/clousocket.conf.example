@@ -1,0 +1,20 @@
+[NETWORK]
+HOST = 127.0.0.1 # host for management server
+PORT = 4921 # port for management server
+
+[HEARTBEAT]
+HBInitInterval = 500 # initial hearbeat interval
+HBMaxInterval = 500 # max hearbeat interval
+HBMinInterval = 500 # min hearbeat interval
+HBTimeout = 500 # hearbeat timeout
+
+[REDIS]
+Endpoint = your redis host
+Port = your redis port
+Password = your redis database password
+MaxConnections = 27 # default for redislav
+
+[SENTRY]
+DSN = your sentry dsn
+TracesSampleRate = 1.0
+ProfilesSampleRate = 1.0
