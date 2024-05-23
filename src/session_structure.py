@@ -77,7 +77,8 @@ class Session:
                     await self.ht_base.heartbeat()
                     await self.loop.sock_sendto(self.proto,
                                                 bytes(json.dumps({"op": -1,
-                                                                  "d" : {"heartbeat_interval":
+                                                                  "d" : {
+                                                                      "heartbeat_interval":
                                                                              self.ht_base.heartbeat_interval}
                                                                   }),
                                                       "utf-8"),
@@ -119,9 +120,9 @@ class Session:
             ts = time.perf_counter_ns() / 1000000
             if message["op"] == 1:
                 await self.loop.sock_sendto(self.proto, bytes(json.dumps({"op": 2,
-                                                                          "d" :
-                                                                              {"heartbeat_interval":
-                                                                                   self.ht_base.heartbeat_interval}}),
+                                                                          "d" : {
+                                                                              "heartbeat_interval":
+                                                                                  self.ht_base.heartbeat_interval}}),
                                                               "utf-8"),
                                             self.addr)
             te = time.perf_counter_ns() / 1000000
