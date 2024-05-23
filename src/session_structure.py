@@ -5,6 +5,7 @@ import socket
 import threading
 import time
 
+import hiredis
 import sentry_sdk
 
 
@@ -25,7 +26,9 @@ class HeartbeatBase:
     async def update_heartbeat(self):
         current_time = time.perf_counter()
         elapsed_time = current_time - self.last_activity_ts
-        new_interval = max(self.min_heartbeat, self.init_heartbeat_interval + elapsed_time)
+        new_interval = max(
+            self.min_heartbeat, self.init_heartbeat_interval + elapsed_time
+        )
         new_interval = min(new_interval, self.max_heartbeat)
         self.heartbeat_interval = new_interval
         self.last_activity_ts = current_time
@@ -41,7 +44,9 @@ class Session:
     def __init__(self, proto: socket.socket, addr, consul, consular):
         self.last_activity_ts = None
         self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-        self.thread: threading.Thread = threading.Thread(target=self.between_callback, daemon=True)
+        self.thread: threading.Thread = threading.Thread(
+            target=self.between_callback, daemon=True
+        )
         self.proto = proto
         self.ht_base = HeartbeatBase(consul.config)
         self.heartbeat_timeout = int(consul.config["HEARTBEAT"]["HBTimeout"])
@@ -49,6 +54,7 @@ class Session:
         self.addr = addr
         self.consul = consul
         self.consular = consular
+        self.parser = hiredis.Reader()
 
     async def start(self):
         self.thread.start()
@@ -64,7 +70,9 @@ class Session:
                     cnslr.add_task(tg.create_task(self.heartbeat()))
                     cnslr.add_task(tg.create_task(self.io()))
             except HeatbeatTimeoutError:
-                await self.loop.sock_sendto(self.proto, bytes(json.dumps({"op": 121}), "utf-8"), self.addr)
+                await self.loop.sock_sendto(
+                    self.proto, hiredis.pack_command(("HEARTBEAT", "TIMEOUT")), self.addr
+                )
             finally:
                 self.proto.close()
 
@@ -75,13 +83,8 @@ class Session:
                 async with asyncio.timeout(self.heartbeat_timeout / 1000):
                     await self.heartbeat_future
                     await self.ht_base.heartbeat()
-                    await self.loop.sock_sendto(self.proto,
-                                                bytes(json.dumps({"op": -1,
-                                                                  "d" : {
-                                                                      "heartbeat_interval":
-                                                                             self.ht_base.heartbeat_interval}
-                                                                  }),
-                                                      "utf-8"),
+                    await self.loop.sock_sendto(self.proto, hiredis.pack_command(("HEARTBEAT", "INTERVAL",
+                                                                                 f"{self.ht_base.heartbeat_interval}")),
                                                 self.addr)
                     self.heartbeat_future = self.loop.create_future()
             except TimeoutError:
@@ -91,24 +94,22 @@ class Session:
     async def io(self):
         while True:
             message = await self.loop.sock_recv(self.proto, 1024)
-            with (sentry_sdk.start_transaction(op="function", description="Process data (I/O)")):
+            with sentry_sdk.start_transaction(
+                op="function", description="Process data (I/O)"
+            ):
                 if message == b"":
                     break
-                with sentry_sdk.start_span(op="serialize", description="Convert bytes to JSON") as spn:
+                with sentry_sdk.start_span(
+                    op="serialize", description="Convert bytes to JSON"
+                ) as spn:
                     ts = time.perf_counter_ns()
-                    try:
-                        message = json.loads(message.decode('utf-8'))
-                    except json.decoder.JSONDecodeError as err:
-                        await self.loop.sock_sendto(self.proto, bytes(json.dumps({"op": 101,
-                                                                                  "d" : {
-                                                                                      "error": str(err)
-                                                                                  }}),
-                                                                      "utf-8"),
-                                                    self.addr)
-                        continue
+                    self.parser.feed(message)
+                    message = self.parser.gets()
                     te = time.perf_counter_ns()
-                    spn.set_measurement("serialization", (te - ts) / 1000000, "miliseconds")
-                if message["op"] == 0:
+                    spn.set_measurement(
+                        "serialization", (te - ts) / 1000000, "miliseconds"
+                    )
+                if message[0].decode("utf-8") == "HEARTBEAT":
                     self.heartbeat_future.set_result(True)
                     continue
                 self.ht_base.last_activity_ts = time.perf_counter()
@@ -118,17 +119,8 @@ class Session:
     async def handler(self, message):
         with sentry_sdk.start_span(op="function", description="Receive/Send Data"):
             ts = time.perf_counter_ns() / 1000000
-            if message["op"] == 1:
-                await self.loop.sock_sendto(self.proto, bytes(json.dumps({"op": 2,
-                                                                          "d" : {
-                                                                              "heartbeat_interval":
-                                                                                  self.ht_base.heartbeat_interval}}),
-                                                              "utf-8"),
-                                            self.addr)
             te = time.perf_counter_ns() / 1000000
             self.last_activity_ts = time.perf_counter()
             sentry_sdk.metrics.distribution(
-                key="data_handling",
-                value=te - ts,
-                unit="millisecond"
+                key="data_handling", value=te - ts, unit="millisecond"
             )
