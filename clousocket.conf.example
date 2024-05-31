@@ -9,9 +9,7 @@ HBMinInterval = 500 # min hearbeat interval
 HBTimeout = 500 # hearbeat timeout
 
 [REDIS]
-Endpoint = your redis host
-Port = your redis port
-Password = your redis database password
+Url = your redis url, e.g. redis://:password@localhost:6310/0
 MaxConnections = 27 # default for redislav
 
 [SENTRY]

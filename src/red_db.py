@@ -1,11 +1,9 @@
-import asyncio
-import threading
+import math
 import time
 import uuid
-from queue import Queue
-from typing import AsyncIterator
 
-import redis.asyncio as redis
+import trio
+import redio
 import sentry_sdk
 
 
@@ -15,21 +13,23 @@ class EndOfStream(Exception):
 
 class IOQueue:
     def __init__(self):
-        self.queue = Queue()
-        self.task_done = self.queue.task_done
+        self.s_channel, self.r_channel = trio.open_memory_channel(math.inf)
 
     async def append(self, data, cid):
-        self.queue.put([data, cid])
+        await self.s_channel.send([data, cid])
 
-    async def __aiter__(self) -> AsyncIterator:
+    async def __aiter__(self):
         try:
             while True:
-                yield await self.recv_io_stream()
+                try:
+                    yield await self.recv_io_stream()
+                except trio.EndOfChannel:
+                    break
         except EndOfStream:
             raise EndOfStream()
 
     async def recv_io_stream(self):
-        res = self.queue.get()
+        res = await self.r_channel.receive()
         return res
 
 
@@ -37,45 +37,29 @@ class RedisTPCS:
     def __init__(self, consul):
         self.consul = consul
         self.max_conns = int(self.consul.config["REDIS"]["MaxConnections"])
-        self.threads = [threading.Thread(target=self.between_callback) for _ in range(self.max_conns - 1)]
         self.in_queue = IOQueue()
         self.out_queue = IOQueue()
+        self.pool = redio.Redis(self.consul.config["REDIS"]["Url"], pool_max=self.max_conns)
 
-    async def execute(self, command):
+    async def execute(self, *inp):
         with sentry_sdk.start_transaction(op="subprocess.communicate", name="Database Command Process"):
             pid = uuid.uuid1()
-            await self.in_queue.append(command, pid)
+            await self.in_queue.append(inp, pid)
             async for data, cid in self.out_queue:
                 if cid == pid:
-                    self.out_queue.task_done()
                     return data
 
-    def start(self):
-        [thrd.start() for thrd in self.threads]
-
-    def between_callback(self):
-        asyncio.run(self.starter())
-
     async def starter(self):
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(self.executor())
+        for _ in range(self.max_conns):
+            trio.lowlevel.spawn_system_task(self.executor)
 
     async def executor(self):
-        pool = redis.ConnectionPool(
-            host=self.consul.config["REDIS"]["Endpoint"],
-            port=self.consul.config["REDIS"]["Port"],
-            password=self.consul.config["REDIS"]["Password"],
-            max_connections=1,
-            decode_responses=True,
-            protocol=3
-        )
-        await pool.disconnect(True)
         async for comm, cid in self.in_queue:
             ts = time.perf_counter_ns()
             with sentry_sdk.start_transaction(op="db.redis", name="Database Command Exec.") as trs:
+                conn = self.pool()
                 try:
-                    conn: redis.Redis = redis.Redis(connection_pool=pool)
-                    res = await conn.execute_command(comm)
+                    res = await conn._command(*comm).autodecode
                     await self.out_queue.append(res, cid)
                     te = (time.perf_counter_ns() / 1000000) - ts / 1000000
                     sentry_sdk.set_measurement('redis_command_exec', te, 'miliseconds')
@@ -85,11 +69,8 @@ class RedisTPCS:
                         unit="millisecond"
                     )
                 except Exception as err:
-                    print(err)
                     sentry_sdk.capture_exception(err)
                     continue
                 finally:
-                    await conn.aclose()
-                    await pool.disconnect(True)
-                    self.in_queue.task_done()
-                    trs.set_tag("command", comm.split(" ")[0])
+                    del conn
+                    trs.set_tag("command", comm[0])

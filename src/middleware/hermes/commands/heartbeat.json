@@ -1,0 +1,12 @@
+{
+  "heartbeat": {
+    "function": "heartbeatAck",
+    "args": [
+      {
+        "name": "abc",
+        "type": "bool",
+        "required": true
+      }
+    ]
+  }
+}

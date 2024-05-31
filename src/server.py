@@ -1,26 +1,24 @@
-import asyncio
-import socket
+import sentry_sdk
+import trio
 
 from src import consul
 
 
 async def server():
     async with consul.SupremeConsul() as cn:
-        print(f"Redis {await cn.db.execute('GET init')}ialized successfully.")
+        print(f"Redis {await cn.db.execute('GET', 'init')}ialized successfully.")
 
-        loop = asyncio.get_running_loop()
-
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((cn.host, cn.port))
-            s.listen()
-            async for _ in cn:
-                conn, addr = await loop.sock_accept(s)
-                await cn.create_session(conn, addr)
+        try:
+            async with trio.open_nursery() as nursery:
+                await nursery.start(trio.serve_tcp, cn.create_session, cn.port)
+        except* KeyboardInterrupt:
+            raise KeyboardInterrupt()
+        except* Exception as err:
+            sentry_sdk.capture_exception(err)
 
 
 if __name__ == "__main__":
     try:
-        with asyncio.Runner() as runner:
-            runner.run(server())
-    except KeyboardInterrupt:
-        pass
+        trio.run(server)
+    except* KeyboardInterrupt:
+        print("Closed")

@@ -1,12 +1,9 @@
-import asyncio
 import configparser
-import json
-import socket
-import threading
 import time
 
 import hiredis
 import sentry_sdk
+import trio
 
 
 class HeatbeatTimeoutError(Exception):
@@ -41,59 +38,51 @@ class HeartbeatBase:
 
 
 class Session:
-    def __init__(self, proto: socket.socket, addr, consul, consular):
+    def __init__(self, proto: trio.SocketStream, consul, consular):
         self.last_activity_ts = None
-        self.loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-        self.thread: threading.Thread = threading.Thread(
-            target=self.between_callback, daemon=True
-        )
-        self.proto = proto
+        self.proto: trio.SocketStream = proto
         self.ht_base = HeartbeatBase(consul.config)
         self.heartbeat_timeout = int(consul.config["HEARTBEAT"]["HBTimeout"])
-        self.heartbeat_future = self.loop.create_future()
-        self.addr = addr
+        self.heartbeat_future = trio.Event()
         self.consul = consul
         self.consular = consular
         self.parser = hiredis.Reader()
 
-    async def start(self):
-        self.thread.start()
-
     def between_callback(self):
-        asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self.basis())
+        trio.from_thread.run(self.basis)
 
     async def basis(self):
         async with self.consular as cnslr:
             try:
-                async with asyncio.TaskGroup() as tg:
-                    cnslr.add_task(tg.create_task(self.heartbeat()))
-                    cnslr.add_task(tg.create_task(self.io()))
-            except HeatbeatTimeoutError:
-                await self.loop.sock_sendto(
-                    self.proto, hiredis.pack_command(("HEARTBEAT", "TIMEOUT")), self.addr
-                )
+                async with trio.open_nursery() as nursery:
+                    cnslr.set_nursery(nursery)
+                    nursery.start_soon(self.heartbeat)
+                    nursery.start_soon(self.io)
+            except* HeatbeatTimeoutError:
+                await self.proto.send_all(hiredis.pack_command(("HEARTBEAT", "TIMEOUT")))
+                nursery.cancel_scope.cancel()
+            except* trio.BrokenResourceError:
+                pass
             finally:
-                self.proto.close()
+                await self.proto.aclose()
 
     async def heartbeat(self):
         while True:
-            await asyncio.sleep(self.ht_base.heartbeat_interval_in_seconds)
+            await trio.sleep(self.ht_base.heartbeat_interval_in_seconds)
             try:
-                async with asyncio.timeout(self.heartbeat_timeout / 1000):
-                    await self.heartbeat_future
+                with trio.move_on_after(self.heartbeat_timeout / 1000) as scope:
+                    await self.heartbeat_future.wait()
                     await self.ht_base.heartbeat()
-                    await self.loop.sock_sendto(self.proto, hiredis.pack_command(("HEARTBEAT", "INTERVAL",
-                                                                                 f"{self.ht_base.heartbeat_interval}")),
-                                                self.addr)
-                    self.heartbeat_future = self.loop.create_future()
+                    await self.proto.send_all(hiredis.pack_command(("HEARTBEAT", "ACK",
+                                                                    f"{self.ht_base.heartbeat_interval}")))
+                if scope.cancelled_caught:
+                    raise TimeoutError()
             except TimeoutError:
                 break
-        raise asyncio.CancelledError("Heartbeat timed out")
+        raise HeatbeatTimeoutError("Heartbeat timed out")
 
     async def io(self):
-        while True:
-            message = await self.loop.sock_recv(self.proto, 1024)
+        async for message in self.proto:
             with sentry_sdk.start_transaction(
                 op="function", description="Process data (I/O)"
             ):
@@ -110,7 +99,7 @@ class Session:
                         "serialization", (te - ts) / 1000000, "miliseconds"
                     )
                 if message[0].decode("utf-8") == "HEARTBEAT":
-                    self.heartbeat_future.set_result(True)
+                    self.heartbeat_future.set()
                     continue
                 self.ht_base.last_activity_ts = time.perf_counter()
                 await self.handler(message)
