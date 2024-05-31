@@ -1,4 +1,4 @@
-![Clousocket](assets/clousocket3-1.png)
+![Clousocket](assets/clousocket.png)
 # About Clousocket
 ### What is Clousocket:
 Clousocket is an Aws lambda-like open-source network computing project for everyone.
