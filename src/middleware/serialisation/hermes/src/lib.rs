@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2024. Lovania
+ */
+
 pub use self::serialize::{encode, encode_slice, Decoder};
 pub use self::value::Value;
 use pyo3::prelude::*;
@@ -11,6 +15,5 @@ mod value;
 #[pymodule]
 fn hermes(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encode_slice, m)?).unwrap();
-    m.add_class::<Decoder>()?;
     Ok(())
 }

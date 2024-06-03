@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2024. Lovania
+ */
+
 //! RESP Value
 
 use std::any::Any;

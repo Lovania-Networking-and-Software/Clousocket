@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2024. Lovania
+ */
+
 //! RESP serialize
 
 use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Result};

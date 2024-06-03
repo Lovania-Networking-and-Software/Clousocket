@@ -1,3 +1,7 @@
+#
+#  Copyright (C) 2024-present Lovania
+#
+
 import tomllib
 import typing
 import uuid

@@ -1,3 +1,7 @@
+#
+#  Copyright (C) 2024-present Lovania
+#
+
 class Execution(Exception):
     def __init__(self, reason=None):
         self.reason = reason
