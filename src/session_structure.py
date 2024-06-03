@@ -96,7 +96,7 @@ class Session:
                     message = self.parser.gets()
                     te = time.perf_counter_ns()
                     spn.set_measurement(
-                        "serialization", (te - ts) / 1000000, "miliseconds"
+                        "serialisation", (te - ts) / 1000000, "miliseconds"
                     )
                 if message[0].decode("utf-8") == "HEARTBEAT":
                     self.heartbeat_future.set()

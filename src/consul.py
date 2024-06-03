@@ -12,7 +12,6 @@ from src.errors import Execution
 
 
 class SupremeConsul:
-    limiter = trio.CapacityLimiter(1024)
 
     def __init__(self):
         self.config: configparser.ConfigParser
@@ -27,6 +26,7 @@ class SupremeConsul:
         async with trio.open_nursery() as self.nursery:
             self.config = configparser.ConfigParser()
             self.config.read('../clousocket.conf')
+            self.limiter = trio.CapacityLimiter(int(self.config["THREADING"]["ThreadLimit"]))
 
             self.host = self.config["NETWORK"]["HOST"]
             self.port = int(self.config["NETWORK"]["PORT"])

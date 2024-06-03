@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import hiredis
 
+import hermes
+
 
 class CommandNotFound(Exception):
     pass
@@ -46,7 +48,7 @@ class HermesCommands:
         self._update()
 
     def _update(self):
-        directory_path = "./middleware/hermes/commands"
+        directory_path = "./middleware/serialisation/commands"
         for filename in os.listdir(directory_path):
             filepath = os.path.join(directory_path, filename)
             if os.path.isfile(filepath):
@@ -149,3 +151,4 @@ if __name__ == "__main__":
     print(ser.convert_request(*reader.gets()))
     te = time.perf_counter_ns()
     print(f"Took {(te-ts)/1000}ms")
+    print(bytearray(hermes.encode_slice(("HEARTBEAT", 1, 2, 3))))
