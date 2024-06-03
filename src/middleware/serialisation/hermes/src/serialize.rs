@@ -29,7 +29,7 @@ pub fn encode(value: &Value) -> Vec<u8> {
 }
 
 /// Encodes a slice of string to RESP binary buffer.
-/// It is use to create a request command on redis client.
+/// It is used to create a request command on redis client.
 /// # Examples
 /// ```
 /// # use self::resp::encode_slice;
@@ -120,7 +120,7 @@ impl<R: Read> Decoder<R> {
     pub fn new(reader: BufReader<R>) -> Self {
         Decoder {
             buf_bulk: false,
-            reader: reader,
+            reader,
         }
     }
 
@@ -140,7 +140,7 @@ impl<R: Read> Decoder<R> {
     pub fn with_buf_bulk(reader: BufReader<R>) -> Self {
         Decoder {
             buf_bulk: true,
-            reader: reader,
+            reader,
         }
     }
 
