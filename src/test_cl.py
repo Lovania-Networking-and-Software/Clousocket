@@ -1,3 +1,7 @@
+#
+#  Copyright (C) 2024. Lovania
+#
+
 import asyncio
 import socket
 import threading
