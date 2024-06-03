@@ -151,4 +151,4 @@ if __name__ == "__main__":
     print(ser.convert_request(*reader.gets()))
     te = time.perf_counter_ns()
     print(f"Took {(te-ts)/1000}ms")
-    print(bytearray(hermes.encode_slice(("HEARTBEAT", 1, 2, 3))))
+    print(hermes.encode_slice(("HEARTBEAT", 1, 2, 3)))

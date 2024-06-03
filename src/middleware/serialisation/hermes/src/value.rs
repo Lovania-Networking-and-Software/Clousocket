@@ -1,9 +1,11 @@
 //! RESP Value
 
+use std::any::Any;
 use std::vec::Vec;
 use std::string::String;
 use std::marker::{Send, Sync};
 use std::io::{Result, Error, ErrorKind};
+use pyo3::PyAny;
 use super::serialize::encode;
 
 /// Represents a RESP value, see [Redis Protocol specification](http://redis.io/topics/protocol).
