@@ -36,10 +36,10 @@ class IOQueue:
 class RedisTPCS:
     def __init__(self, consul):
         self.consul = consul
-        self.max_conns = int(self.consul.config["REDIS"]["MaxConnections"])
+        self.max_conns = int(self.consul.config["redis"]["max-connections"])
         self.in_queue = IOQueue()
         self.out_queue = IOQueue()
-        self.pool = redio.Redis(self.consul.config["REDIS"]["Url"], pool_max=self.max_conns)
+        self.pool = redio.Redis(self.consul.config["redis"]["url"], pool_max=self.max_conns)
 
     async def execute(self, *inp):
         with sentry_sdk.start_transaction(op="subprocess.communicate", name="Database Command Process"):

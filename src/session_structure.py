@@ -13,9 +13,9 @@ class HeatbeatTimeoutError(Exception):
 class HeartbeatBase:
     def __init__(self, config):
         self.config: configparser.ConfigParser = config
-        self.min_heartbeat = float(self.config["HEARTBEAT"]["HBMinInterval"])
-        self.max_heartbeat = float(self.config["HEARTBEAT"]["HBMaxInterval"])
-        self.init_heartbeat_interval = float(self.config["HEARTBEAT"]["HBInitInterval"])
+        self.min_heartbeat = float(self.config["heartbeat"]["hb-min-interval"])
+        self.max_heartbeat = float(self.config["heartbeat"]["hb-max-interval"])
+        self.init_heartbeat_interval = float(self.config["heartbeat"]["hb-init-interval"])
         self.heartbeat_interval = self.init_heartbeat_interval
         self.heartbeat_interval_in_seconds = self.heartbeat_interval / 1000
         self.last_activity_ts = 0
@@ -42,7 +42,7 @@ class Session:
         self.last_activity_ts = None
         self.proto: trio.SocketStream = proto
         self.ht_base = HeartbeatBase(consul.config)
-        self.heartbeat_timeout = int(consul.config["HEARTBEAT"]["HBTimeout"])
+        self.heartbeat_timeout = int(consul.config["heartbeat"]["hb-timeout"])
         self.heartbeat_future = trio.Event()
         self.consul = consul
         self.consular = consular

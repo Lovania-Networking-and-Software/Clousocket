@@ -1,0 +1,18 @@
+[network]
+host = "127.0.0.1" # host for server
+port = 4921 # port for server
+
+[heartbeat]
+hb-init-interal = 500 # initial hearbeat interval
+hb-max-interval = 500 # max hearbeat interval
+hb-min-interval = 500 # min hearbeat interval
+hb-timeout = 500 # hearbeat timeout
+
+[redis]
+url = "your redis url, e.g. redis://:password@localhost:6310/0"
+max-connections = 27 # default for redislab
+
+[sentry]
+dsn = "your sentry dsn"
+traces-sample-rate = 1.0
+profiles-sample-rate = 1.0

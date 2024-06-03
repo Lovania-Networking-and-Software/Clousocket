@@ -1,4 +1,4 @@
-import configparser
+import tomllib
 import typing
 import uuid
 
@@ -14,7 +14,7 @@ from src.errors import Execution
 class SupremeConsul:
 
     def __init__(self):
-        self.config: configparser.ConfigParser
+        self.config: dict
         self.sessions: dict[str, session_structure.Session] = dict[str, session_structure.Session]()
         self.consulars: list[Consular] = list[Consular]()
         self.nid = uuid.uuid1()
@@ -24,17 +24,17 @@ class SupremeConsul:
 
     async def __aenter__(self):
         async with trio.open_nursery() as self.nursery:
-            self.config = configparser.ConfigParser()
-            self.config.read('../clousocket.conf')
-            self.limiter = trio.CapacityLimiter(int(self.config["THREADING"]["ThreadLimit"]))
+            with open("../clousocket.toml", "rb") as f:
+                self.config = tomllib.load(f)
+            self.limiter = trio.CapacityLimiter(int(self.config["threading"]["thread-limit"]))
 
-            self.host = self.config["NETWORK"]["HOST"]
-            self.port = int(self.config["NETWORK"]["PORT"])
+            self.host = self.config["network"]["host"]
+            self.port = int(self.config["network"]["port"])
 
             sentry_sdk.init(
-                dsn=self.config["SENTRY"]["DSN"],
-                traces_sample_rate=float(self.config["SENTRY"]["TracesSampleRate"]),
-                profiles_sample_rate=float(self.config["SENTRY"]["ProfilesSampleRate"]),
+                dsn=self.config["sentry"]["dsn"],
+                traces_sample_rate=float(self.config["sentry"]["traces-sample-rate"]),
+                profiles_sample_rate=float(self.config["sentry"]["profiles-sample-rate"]),
                 enable_tracing=True,
                 integrations=[
                     AsyncioIntegration(),
