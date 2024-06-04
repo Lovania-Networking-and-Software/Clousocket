@@ -1,27 +1,29 @@
-use pyo3::prelude::*;
 use cached::{Cached, SizedCache};
+use pyo3::prelude::*;
 
 #[pyclass]
 struct ACache {
-    cache: SizedCache<String, String>
+    cache: SizedCache<String, String>,
 }
 
 #[pymethods]
 impl ACache {
     #[new]
     fn new(size: usize) -> ACache {
-        ACache{cache: SizedCache::with_size(size)}
+        ACache {
+            cache: SizedCache::with_size(size),
+        }
     }
 
-    fn add(&mut self, key: String, value: String) -> Option<String>{
+    fn add(&mut self, key: String, value: String) -> Option<String> {
         self.cache.cache_set(key, value)
     }
 
-    fn get(&mut self, key: String) -> Option<&String>{
+    fn get(&mut self, key: String) -> Option<&String> {
         self.cache.cache_get(&key)
     }
 
-    fn delete(&mut self, key: String) -> Option<String>{
+    fn delete(&mut self, key: String) -> Option<String> {
         self.cache.cache_remove(&key)
     }
 }

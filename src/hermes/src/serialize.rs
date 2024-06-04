@@ -49,7 +49,7 @@ pub fn encode_slice(slice: &Bound<'_, PyTuple>) -> Vec<u8> {
         .collect();
     let mut res: Vec<u8> = Vec::new();
     buf_encode(&Value::Array(array), &mut res);
-    return res
+    return res;
 }
 #[inline]
 fn buf_encode(value: &Value, buf: &mut Vec<u8>) {
