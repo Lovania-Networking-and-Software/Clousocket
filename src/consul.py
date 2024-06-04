@@ -26,6 +26,7 @@ class SupremeConsul:
         self.db: red_db.RedisTPCS
         self.ids: dict[id, id] = dict[id, id]()
         self.nursery: typing.Union[trio.Nursery, None] = None
+        self.cache: typing.Union[apex.Cache, None] = None
 
     async def __aenter__(self):
         async with trio.open_nursery() as self.nursery:
@@ -50,6 +51,8 @@ class SupremeConsul:
             self.db = red_db.RedisTPCS(self)
             self.nursery.start_soon(self.db.starter)
             self.wt = WatchTower(self)
+
+            self.cache = apex.ACache(self.config["caching"]["size"])
 
             trio.lowlevel.spawn_system_task(self.wt.watchman)
         return self
