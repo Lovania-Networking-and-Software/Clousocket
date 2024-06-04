@@ -13,6 +13,7 @@ from sentry_sdk.integrations.socket import SocketIntegration
 
 from src import red_db, session_structure
 from src.errors import Execution
+import apex
 
 
 class SupremeConsul:

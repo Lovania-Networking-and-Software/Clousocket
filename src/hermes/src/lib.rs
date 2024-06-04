@@ -5,8 +5,6 @@
 pub use self::serialize::{encode, encode_slice, Decoder};
 pub use self::value::Value;
 use pyo3::prelude::*;
-use std::any::Any;
-use std::io::Read;
 
 mod serialize;
 mod value;

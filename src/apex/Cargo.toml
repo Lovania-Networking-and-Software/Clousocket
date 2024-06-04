@@ -1,0 +1,13 @@
+[package]
+name = "apex"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "apex"
+crate-type = ["cdylib"]
+
+[dependencies]
+cached = "0.51.3"
+pyo3 = { version = "0.21.2", features = ["extension-module"] }
