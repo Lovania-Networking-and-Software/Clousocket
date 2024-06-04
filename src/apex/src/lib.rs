@@ -28,6 +28,10 @@ impl ACache {
     fn get(&mut self, key: String) -> Option<&String>{
         self.cache.cache_get(&key)
     }
+
+    fn delete(&mut self, key: String) -> Option<String>{
+        self.cache.cache_remove(&key)
+    }
 }
 
 /// A Python module implemented in Rust.
