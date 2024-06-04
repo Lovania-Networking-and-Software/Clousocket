@@ -2,9 +2,10 @@
  * Copyright (C) 2024. Lovania
  */
 
+use pyo3::prelude::*;
+
 pub use self::serialize::{encode, encode_slice, Decoder};
 pub use self::value::Value;
-use pyo3::prelude::*;
 
 mod serialize;
 mod value;
