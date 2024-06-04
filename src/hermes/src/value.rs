@@ -4,12 +4,11 @@
 
 //! RESP Value
 
-use std::any::Any;
-use std::vec::Vec;
-use std::string::String;
+use std::io::{Error, ErrorKind, Result};
 use std::marker::{Send, Sync};
-use std::io::{Result, Error, ErrorKind};
-use pyo3::PyAny;
+use std::string::String;
+use std::vec::Vec;
+
 use super::serialize::encode;
 
 /// Represents a RESP value, see [Redis Protocol specification](http://redis.io/topics/protocol).
@@ -255,8 +254,10 @@ mod tests {
         assert_eq!(Value::Integer(123).is_null(), false);
         assert_eq!(Value::Bulk("Bulk".to_string()).is_null(), false);
         assert_eq!(Value::BufBulk(vec![79, 75]).is_null(), false);
-        assert_eq!(Value::Array(vec![Value::Null, Value::Integer(123)]).is_null(),
-                   false);
+        assert_eq!(
+            Value::Array(vec![Value::Null, Value::Integer(123)]).is_null(),
+            false
+        );
     }
 
     #[test]
@@ -269,8 +270,10 @@ mod tests {
         assert_eq!(Value::Integer(123).is_error(), false);
         assert_eq!(Value::Bulk("Bulk".to_string()).is_error(), false);
         assert_eq!(Value::BufBulk(vec![79, 75]).is_error(), false);
-        assert_eq!(Value::Array(vec![Value::Null, Value::Integer(123)]).is_error(),
-                   false);
+        assert_eq!(
+            Value::Array(vec![Value::Null, Value::Integer(123)]).is_error(),
+            false
+        );
     }
 
     #[test]
@@ -332,9 +335,11 @@ mod tests {
         vec.push(Value::Bulk("Hello".to_string()));
         vec.push(Value::BufBulk(vec![79, 75]));
         let val = Value::Array(vec);
-        assert_eq!(val.to_encoded_string().unwrap(),
-                   "*7\r\n$-1\r\n*-1\r\n+OK\r\n-message\r\n:123456789\r\n$5\r\nHello\r\n\
-                   $2\r\nOK\r\n");
+        assert_eq!(
+            val.to_encoded_string().unwrap(),
+            "*7\r\n$-1\r\n*-1\r\n+OK\r\n-message\r\n:123456789\r\n$5\r\nHello\r\n\
+                   $2\r\nOK\r\n"
+        );
     }
 
     #[test]
@@ -345,33 +350,48 @@ mod tests {
         assert_eq!(Value::Null.to_string_pretty(), "(Null)");
         assert_eq!(Value::NullArray.to_string_pretty(), "(Null Array)");
         assert_eq!(Value::String("OK".to_string()).to_string_pretty(), "OK");
-        assert_eq!(Value::Error("Err".to_string()).to_string_pretty(),
-                   "(Error) Err");
+        assert_eq!(
+            Value::Error("Err".to_string()).to_string_pretty(),
+            "(Error) Err"
+        );
         assert_eq!(Value::Integer(123).to_string_pretty(), "(Integer) 123");
-        assert_eq!(Value::Bulk("Bulk String".to_string()).to_string_pretty(),
-                   "\"Bulk String\"");
+        assert_eq!(
+            Value::Bulk("Bulk String".to_string()).to_string_pretty(),
+            "\"Bulk String\""
+        );
         assert_eq!(Value::BufBulk(vec![]).to_string_pretty(), "(Empty Buffer)");
-        assert_eq!(Value::BufBulk(vec![0, 100]).to_string_pretty(),
-                   "(Buffer) 00 64");
-        assert_eq!(Value::BufBulk(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                                       17, 18])
-                       .to_string_pretty(),
-                   "(Buffer) 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f ...");
+        assert_eq!(
+            Value::BufBulk(vec![0, 100]).to_string_pretty(),
+            "(Buffer) 00 64"
+        );
+        assert_eq!(
+            Value::BufBulk(vec![
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
+            ])
+            .to_string_pretty(),
+            "(Buffer) 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f ..."
+        );
         assert_eq!(Value::Array(vec![]).to_string_pretty(), "(Empty Array)");
-        assert_eq!(Value::Array(vec![Value::Null, Value::Integer(123)]).to_string_pretty(),
-                   "1) (Null)\n2) (Integer) 123");
+        assert_eq!(
+            Value::Array(vec![Value::Null, Value::Integer(123)]).to_string_pretty(),
+            "1) (Null)\n2) (Integer) 123"
+        );
 
-        let _values = vec![Value::Null,
-                           Value::NullArray,
-                           Value::String("OK".to_string()),
-                           Value::Error("Err".to_string()),
-                           Value::Integer(123),
-                           Value::Bulk("Bulk String".to_string()),
-                           Value::Array(vec![]),
-                           Value::BufBulk(vec![0, 100]),
-                           Value::Array(vec![Value::Array(vec![]),
-                                             Value::Integer(123),
-                                             Value::Bulk("Bulk String".to_string())])];
+        let _values = vec![
+            Value::Null,
+            Value::NullArray,
+            Value::String("OK".to_string()),
+            Value::Error("Err".to_string()),
+            Value::Integer(123),
+            Value::Bulk("Bulk String".to_string()),
+            Value::Array(vec![]),
+            Value::BufBulk(vec![0, 100]),
+            Value::Array(vec![
+                Value::Array(vec![]),
+                Value::Integer(123),
+                Value::Bulk("Bulk String".to_string()),
+            ]),
+        ];
         let mut values = _values.clone();
         values.push(Value::Array(_values));
         values.push(Value::Null);

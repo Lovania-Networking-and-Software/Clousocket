@@ -49,7 +49,7 @@ pub fn encode_slice(slice: &Bound<'_, PyTuple>) -> Vec<u8> {
         .collect();
     let mut res: Vec<u8> = Vec::new();
     buf_encode(&Value::Array(array), &mut res);
-    res
+    return res
 }
 #[inline]
 fn buf_encode(value: &Value, buf: &mut Vec<u8>) {
@@ -102,7 +102,6 @@ fn buf_encode(value: &Value, buf: &mut Vec<u8>) {
 
 /// A streaming RESP Decoder.
 #[derive(Debug)]
-#[pyclass]
 pub struct Decoder<R> {
     buf_bulk: bool,
     reader: BufReader<R>,
