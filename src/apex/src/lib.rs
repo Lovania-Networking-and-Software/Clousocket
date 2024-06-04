@@ -30,7 +30,7 @@ impl ACache {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn apex(_py: Python, m: &PyModule) -> PyResult<()> {
+fn apex(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ACache>()?;
     Ok(())
 }
