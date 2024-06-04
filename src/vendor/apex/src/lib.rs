@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2024. Lovania
+ */
+
 use cached::{Cached, SizedCache};
 use pyo3::prelude::*;
 
@@ -15,7 +19,7 @@ impl ACache {
         }
     }
 
-    fn add(&mut self, key: String, value: String) -> Option<String> {
+    fn put(&mut self, key: String, value: String) -> Option<String> {
         self.cache.cache_set(key, value)
     }
 

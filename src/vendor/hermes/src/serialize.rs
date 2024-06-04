@@ -8,9 +8,9 @@ use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Result};
 use std::string::String;
 use std::vec::Vec;
 
+use pyo3::{Bound, pyfunction};
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use pyo3::{pyfunction, Bound};
 
 use super::Value;
 
@@ -33,13 +33,6 @@ pub fn encode(value: &Value) -> Vec<u8> {
     res
 }
 
-/// # Examples
-/// ```
-/// # use self::resp::encode_slice;
-/// let array = ["SET", "a", "1"];
-/// assert_eq!(encode_slice(&array),
-///            "*3\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\n1\r\n".to_string().into_bytes());
-/// ```
 #[pyfunction]
 #[pyo3(signature = (slice))]
 pub fn encode_slice(slice: &Bound<'_, PyTuple>) -> Vec<u8> {
@@ -49,8 +42,9 @@ pub fn encode_slice(slice: &Bound<'_, PyTuple>) -> Vec<u8> {
         .collect();
     let mut res: Vec<u8> = Vec::new();
     buf_encode(&Value::Array(array), &mut res);
-    return res;
+    res
 }
+
 #[inline]
 fn buf_encode(value: &Value, buf: &mut Vec<u8>) {
     match value {
