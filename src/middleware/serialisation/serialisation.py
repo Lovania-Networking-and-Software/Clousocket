@@ -1,7 +1,6 @@
 #
 #  Copyright (C) 2024-present Lovania
 #
-
 import functools
 import json
 import os
@@ -9,9 +8,8 @@ import time
 import typing
 from dataclasses import dataclass
 
+import apex
 import hiredis
-
-import hermes
 
 
 class CommandNotFound(Exception):
@@ -45,7 +43,7 @@ class Command:
     next: typing.Union[SubCommand, Data, End]
 
 
-class HermesCommands:
+class Serialiser:
     def __init__(self):
         self.commands = {}
         self.args = {}
@@ -140,26 +138,25 @@ class HermesCommands:
 
 
 if __name__ == "__main__":
-    ser = HermesCommands()
+    ser = Serialiser()
     reader = hiredis.Reader(encoding="utf-8")
-    print(hiredis.pack_command(("'abc', 123",)))
-    reader.feed(hiredis.pack_command(("'abc', 123",)))
-    print(reader.gets())
-    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12, "['abc', 123]")))
-    ts = time.perf_counter_ns()
-    print(ser.convert_request(*reader.gets()))
-    te = time.perf_counter_ns()
-    print(f"Took {(te-ts)/1000}ms")
     reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
     ts = time.perf_counter_ns()
     print(ser.convert_request(*reader.gets()))
     te = time.perf_counter_ns()
-    print(f"Took {(te-ts)/1000}ms")
+    print(f"Took {(te - ts) / 1000}ms")
+    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
     ts = time.perf_counter_ns()
-    print(hermes.encode_slice(("HEARTBEAT", 1, 2, 3)))
+    print(ser.convert_request(*reader.gets()))
     te = time.perf_counter_ns()
-    print(f"Took {(te-ts)/1000}ms")
+    print(f"Took {(te - ts) / 1000}ms")
+    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
     ts = time.perf_counter_ns()
-    print(hiredis.pack_command(("HEARTBEAT", 1, 2, 3)))
+    print(ser.convert_request(*reader.gets()))
     te = time.perf_counter_ns()
-    print(f"Took {(te-ts)/1000}ms")
+    print(f"Took {(te - ts) / 1000}ms")
+    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
+    ts = time.perf_counter_ns()
+    print(ser.convert_request(*reader.gets()))
+    te = time.perf_counter_ns()
+    print(f"Took {(te - ts) / 1000}ms")
