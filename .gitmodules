@@ -1,0 +1,3 @@
+[submodule "src/vendor/apex"]
+	path = src/vendor/apex
+	url = https://github.com/Lovania-Networking-and-Software/apex.git

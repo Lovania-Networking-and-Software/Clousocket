@@ -8,7 +8,6 @@ import time
 import typing
 from dataclasses import dataclass
 
-import apex
 import hiredis
 
 
