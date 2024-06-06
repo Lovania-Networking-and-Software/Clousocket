@@ -1,0 +1,25 @@
+[package]
+name = "apex"
+version = "3.0.0"
+edition = "2021"
+
+[lib]
+name = "apex"
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = "fat"
+codegen-units=1
+strip = "symbols"
+panic = "abort"
+
+[dependencies]
+hashbrown = { version = "^0.14", default-features = false, features=["inline-more", "raw"]}
+fastrand = "2"
+parking_lot = "^0.12"
+pyo3 = { version = "^0.21", default-features = false, features=["macros", "extension-module"] }
+ahash = { version = "^0.8", default-features = false, features=["std"] }
+
+[lints.clippy]
+dbg_macro = "warn"
+print_stdout = "warn"
