@@ -8,6 +8,7 @@ import time
 import typing
 from dataclasses import dataclass
 
+import apex
 import hiredis
 
 
@@ -159,3 +160,4 @@ if __name__ == "__main__":
     print(ser.convert_request(*reader.gets()))
     te = time.perf_counter_ns()
     print(f"Took {(te - ts) / 1000}ms")
+    print(apex.LRUCache(10))
