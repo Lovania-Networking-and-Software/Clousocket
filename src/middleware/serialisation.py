@@ -1,6 +1,7 @@
 #
 #  Copyright (C) 2024-present Lovania
 #
+
 import functools
 import json
 import os
@@ -8,7 +9,6 @@ import time
 import typing
 from dataclasses import dataclass
 
-import apex
 import hiredis
 
 
@@ -50,7 +50,7 @@ class Serialiser:
         self._update()
 
     def _update(self):
-        directory_path = "./middleware/serialisation/commands"
+        directory_path = "./commands"
         for filename in os.listdir(directory_path):
             filepath = os.path.join(directory_path, filename)
             if os.path.isfile(filepath):
@@ -160,4 +160,3 @@ if __name__ == "__main__":
     print(ser.convert_request(*reader.gets()))
     te = time.perf_counter_ns()
     print(f"Took {(te - ts) / 1000}ms")
-    print(apex.LRUCache(10))

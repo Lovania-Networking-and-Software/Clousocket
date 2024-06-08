@@ -14,6 +14,7 @@ from sentry_sdk.integrations.socket import SocketIntegration
 from src import red_db, session_structure
 from src.errors import Execution
 import apex
+from src.gatehouse.gatehouse import Gatehouse
 
 
 class SupremeConsul:
@@ -52,7 +53,10 @@ class SupremeConsul:
             self.nursery.start_soon(self.db.starter)
             self.wt = WatchTower(self)
 
-            self.cache = apex.ACache(self.config["caching"]["size"])
+            self.gh = Gatehouse(self)
+            self.nursery.start_soon(self.gh.starter)
+
+            self.cache = apex.LRUCache(self.config["caching"]["size"])
 
             trio.lowlevel.spawn_system_task(self.wt.watchman)
         return self
@@ -82,6 +86,10 @@ class SupremeConsul:
             sesid = id(ses)
             self.sessions[str(uuid.uuid3(self.nid, f"{sesid}"))] = ses
             self.ids[id(cnslr)] = sesid
+            res = await self.gh.execute(sck, sck.socket.getpeername())
+            if not res:
+                await sck.aclose()
+                return None
             await trio.to_thread.run_sync(ses.between_callback, limiter=self.limiter)
 
 

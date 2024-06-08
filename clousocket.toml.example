@@ -2,6 +2,15 @@
 host = "127.0.0.1" # host for server
 port = 4921 # port for server
 
+[gatehouse]
+thread-count = 128 # count of gatehouse's gates
+
+[caching]
+size = 1024 # key size of cache
+
+[threading]
+thread-limit = 1024 # number of threads of server
+
 [heartbeat]
 hb-init-interal = 500 # initial hearbeat interval
 hb-max-interval = 500 # max hearbeat interval

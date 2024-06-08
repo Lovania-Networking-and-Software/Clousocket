@@ -17,7 +17,7 @@ async def main():
     parser = hiredis.Reader()
 
     def send_data(data):
-        for _ in range(100):
+        for _ in range(10):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as so:
                 so.connect((HOST, PORT))
                 so.sendall(data)
