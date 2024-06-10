@@ -21,7 +21,7 @@ async def main():
                 so.recv(1024)
 
     for _ in range(128):
-        threading.Thread(target=send_data, args=(hiredis.pack_command(("HEARTBEATt",)),)).start()
+        threading.Thread(target=send_data, args=(hiredis.pack_command(("HEARTBEAT",)),)).start()
 
 
 if __name__ == '__main__':

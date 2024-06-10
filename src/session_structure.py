@@ -88,7 +88,7 @@ class Session:
                 req = await self.consul.middleware.handle(message)
                 if req.this == "not found":
                     await self.proto.send_all(hiredis.pack_command(("ERR", "unknown", "command", f"'{req.next.this}'")))
-                if req.this == "HEARTBEAT":
+                if req.this == "heartbeat":
                     self.heartbeat_future.set()
                     continue
                 self.ht_base.last_activity_ts = time.perf_counter()
