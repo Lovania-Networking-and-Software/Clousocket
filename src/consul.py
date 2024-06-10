@@ -84,17 +84,16 @@ class SupremeConsul:
         return self
 
     async def create_session(self, sck: trio.SocketStream):
-        with sentry_sdk.start_transaction(op="task", name="Session starting"):
-            cnslr = Consular(self)
-            ses = session_structure.Session(sck, self, cnslr)
-            sesid = id(ses)
-            self.sessions[str(uuid.uuid3(self.nid, f"{sesid}"))] = ses
-            self.ids[id(cnslr)] = sesid
-            res = await self.gh.execute(sck, sck.socket.getpeername())
-            if not res:
-                await sck.aclose()
-                return None
-            await trio.to_thread.run_sync(ses.between_callback, limiter=self.limiter)
+        cnslr = Consular(self)
+        ses = session_structure.Session(sck, self, cnslr)
+        sesid = id(ses)
+        self.sessions[str(uuid.uuid3(self.nid, f"{sesid}"))] = ses
+        self.ids[id(cnslr)] = sesid
+        res = await self.gh.execute(sck, sck.socket.getpeername())
+        if not res:
+            await sck.aclose()
+            return None
+        await trio.to_thread.run_sync(ses.between_callback, limiter=self.limiter)
 
 
 class WatchTower:

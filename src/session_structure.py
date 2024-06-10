@@ -2,7 +2,6 @@
 #  Copyright (C) 2024-present Lovania
 #
 
-import configparser
 import time
 
 import hiredis
@@ -16,7 +15,7 @@ class HeatbeatTimeoutError(Exception):
 
 class HeartbeatBase:
     def __init__(self, config):
-        self.config: configparser.ConfigParser = config
+        self.config: dict = config
         self.min_heartbeat = float(self.config["heartbeat"]["hb-min-interval"])
         self.max_heartbeat = float(self.config["heartbeat"]["hb-max-interval"])
         self.init_heartbeat_interval = float(self.config["heartbeat"]["hb-init-interval"])
@@ -27,9 +26,7 @@ class HeartbeatBase:
     async def update_heartbeat(self):
         current_time = time.perf_counter()
         elapsed_time = current_time - self.last_activity_ts
-        new_interval = max(
-            self.min_heartbeat, self.init_heartbeat_interval + elapsed_time
-        )
+        new_interval = max(self.min_heartbeat, self.init_heartbeat_interval + elapsed_time)
         new_interval = min(new_interval, self.max_heartbeat)
         self.heartbeat_interval = new_interval
         self.last_activity_ts = current_time
@@ -77,8 +74,8 @@ class Session:
                 with trio.move_on_after(self.heartbeat_timeout / 1000) as scope:
                     await self.heartbeat_future.wait()
                     await self.ht_base.heartbeat()
-                    await self.proto.send_all(hiredis.pack_command(("HEARTBEAT", "ACK",
-                                                                    f"{self.ht_base.heartbeat_interval}")))
+                    await self.proto.send_all(
+                        hiredis.pack_command(("HEARTBEAT", "ACK", f"{self.ht_base.heartbeat_interval}")))
                 if scope.cancelled_caught:
                     raise TimeoutError()
             except TimeoutError:
@@ -87,9 +84,7 @@ class Session:
 
     async def io(self):
         async for message in self.proto:
-            with sentry_sdk.start_transaction(
-                    op="function", description="Process data (I/O)"
-            ):
+            with sentry_sdk.start_transaction(op="function", name="IO Middleware"):
                 req = await self.consul.middleware.handle(message)
                 if req.this == "HEARTBEAT":
                     self.heartbeat_future.set()
@@ -99,10 +94,7 @@ class Session:
 
     @sentry_sdk.trace
     async def handler(self, message):
-        with sentry_sdk.start_span(op="function", description="Receive/Send Data"):
-            ts = time.perf_counter_ns() / 1000000
-            te = time.perf_counter_ns() / 1000000
-            self.last_activity_ts = time.perf_counter()
-            sentry_sdk.metrics.distribution(
-                key="data_handling", value=te - ts, unit="millisecond"
-            )
+        ts = time.perf_counter_ns()
+        te = time.perf_counter_ns()
+        self.last_activity_ts = time.perf_counter()
+        sentry_sdk.metrics.distribution(key="data_handling", value=(te - ts) / 1000000, unit="millisecond")
