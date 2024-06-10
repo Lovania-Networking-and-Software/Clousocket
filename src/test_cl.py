@@ -5,7 +5,6 @@
 import asyncio
 import socket
 import threading
-import time
 
 import hiredis
 
@@ -14,17 +13,14 @@ PORT = 4921
 
 
 async def main():
-    parser = hiredis.Reader()
-
     def send_data(data):
-        for _ in range(10):
+        for _ in range(1):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as so:
                 so.connect((HOST, PORT))
                 so.sendall(data)
-                parser.feed(so.recv(1024))
-                time.sleep(0.1)
+                so.recv(1024)
 
-    for _ in range(100):
+    for _ in range(128):
         threading.Thread(target=send_data, args=(hiredis.pack_command(("HEARTBEAT",)),)).start()
 
 
