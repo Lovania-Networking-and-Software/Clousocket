@@ -16,14 +16,6 @@ import sentry_sdk
 from src.middleware.abc_mil import MIL
 
 
-class CommandNotFound(Exception):
-    pass
-
-
-class ArgumentError(Exception):
-    pass
-
-
 @dataclass
 class End:
     pass
@@ -111,7 +103,7 @@ class Serialiser:
         elif not recursive:
             cmd = request[0].lower()
             if cmd not in self.commands.keys():
-                raise CommandNotFound(f"Command '{cmd}' not found.")
+                return Command(this="not found", next=Data(this=cmd, next=End()))
 
             if len(request) == 1:
                 sentry_sdk.set_measurement(

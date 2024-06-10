@@ -86,14 +86,16 @@ class Session:
         async for message in self.proto:
             with sentry_sdk.start_transaction(op="function", name="IO Middleware"):
                 req = await self.consul.middleware.handle(message)
+                if req.this == "not found":
+                    await self.proto.send_all(hiredis.pack_command(("ERR", "unknown", "command", f"'{req.next.this}'")))
                 if req.this == "HEARTBEAT":
                     self.heartbeat_future.set()
                     continue
                 self.ht_base.last_activity_ts = time.perf_counter()
-                await self.handler(message)
+                await self.handler(req)
 
     @sentry_sdk.trace
-    async def handler(self, message):
+    async def handler(self, request):
         ts = time.perf_counter_ns()
         te = time.perf_counter_ns()
         self.last_activity_ts = time.perf_counter()
