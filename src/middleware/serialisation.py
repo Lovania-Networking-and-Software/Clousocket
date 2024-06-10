@@ -8,8 +8,12 @@ import os
 import time
 import typing
 from dataclasses import dataclass
+from typing import Any
 
 import hiredis
+import sentry_sdk
+
+from src.middleware.abc_mil import MIL
 
 
 class CommandNotFound(Exception):
@@ -93,11 +97,16 @@ class Serialiser:
             self.args.setdefault(cmd_name, {0: None, 1: {}})
             self.args[cmd_name][1][sub_cmd_name] = {arg["name"]: arg for arg in args}
 
+    @sentry_sdk.trace
     @functools.lru_cache()
     def convert_request(
         self, *request: str, recursive: bool = False
     ) -> typing.Union[Command, SubCommand, Data, End]:
+        ts = time.perf_counter_ns()
         if len(request) == 0:
+            sentry_sdk.set_measurement(
+                "serialisation", (time.perf_counter_ns() - ts) / 1000000, "miliseconds"
+            )
             return End()
         elif not recursive:
             cmd = request[0].lower()
@@ -105,25 +114,39 @@ class Serialiser:
                 raise CommandNotFound(f"Command '{cmd}' not found.")
 
             if len(request) == 1:
+                sentry_sdk.set_measurement(
+                    "serialisation", (time.perf_counter_ns() - ts) / 1000000, "miliseconds"
+                )
                 return Command(this=cmd, next=End())
 
             if len(request) == 2:
                 sub_cmd = request[1]
                 if sub_cmd in self.commands[cmd][1]:
+                    sentry_sdk.set_measurement(
+                        "serialisation", (time.perf_counter_ns() - ts) / 1000000, "miliseconds"
+                    )
                     return Command(this=cmd, next=SubCommand(this=sub_cmd, next=End()))
                 else:
+                    sentry_sdk.set_measurement(
+                        "serialisation", (time.perf_counter_ns() - ts) / 1000000, "miliseconds"
+                    )
                     return Command(this=cmd, next=Data(this=sub_cmd, next=End()))
 
             data = request[1:]
             sub_cmd = request[1]
             if sub_cmd in self.commands[cmd][1]:
+                sentry_sdk.set_measurement(
+                    "serialisation", (time.perf_counter_ns() - ts) / 1000000, "miliseconds"
+                )
                 return Command(
                     this=cmd,
                     next=SubCommand(
                         sub_cmd, next=self.convert_request(*data[1:], recursive=True)
                     )
                 )
-
+            sentry_sdk.set_measurement(
+                "serialisation", (time.perf_counter_ns() - ts) / 1000000, "miliseconds"
+            )
             return Command(
                 this=cmd,
                 next=Data(
@@ -132,31 +155,29 @@ class Serialiser:
             )
         else:
             data = request[1:]
+            sentry_sdk.set_measurement(
+                "serialisation", (time.perf_counter_ns() - ts) / 1000000, "miliseconds"
+            )
             return Data(
                 this=request[0], next=self.convert_request(*data, recursive=True)
             )
 
 
-if __name__ == "__main__":
-    ser = Serialiser()
-    reader = hiredis.Reader(encoding="utf-8")
-    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
-    ts = time.perf_counter_ns()
-    print(ser.convert_request(*reader.gets()))
-    te = time.perf_counter_ns()
-    print(f"Took {(te - ts) / 1000}ms")
-    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
-    ts = time.perf_counter_ns()
-    print(ser.convert_request(*reader.gets()))
-    te = time.perf_counter_ns()
-    print(f"Took {(te - ts) / 1000}ms")
-    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
-    ts = time.perf_counter_ns()
-    print(ser.convert_request(*reader.gets()))
-    te = time.perf_counter_ns()
-    print(f"Took {(te - ts) / 1000}ms")
-    reader.feed(hiredis.pack_command(("heartbeat", "ack", 12)))
-    ts = time.perf_counter_ns()
-    print(ser.convert_request(*reader.gets()))
-    te = time.perf_counter_ns()
-    print(f"Took {(te - ts) / 1000}ms")
+class ReaderMIL(MIL):
+    def __init__(self):
+        self.r = hiredis.Reader(encoding="utf-8")
+
+    @sentry_sdk.trace
+    @functools.lru_cache()
+    def handle(self, request) -> list[str]:
+        self.r.feed(request)
+        return self.r.gets()
+
+
+class SerialiserMIL(MIL):
+    def __init__(self):
+        self.s = Serialiser()
+
+    @sentry_sdk.trace
+    def handle(self, request) -> Any:
+        return self.s.convert_request(*request)

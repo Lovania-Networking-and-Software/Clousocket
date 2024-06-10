@@ -1,13 +1,13 @@
 #
 #  Copyright (C) 2024-present Lovania
 #
+
 import glob
 import importlib
-import sys
 import importlib.util
+import sys
 import time
 import uuid
-from typing import Dict
 
 import sentry_sdk
 import trio
@@ -51,7 +51,7 @@ class Gatehouse:
             if nn.endswith("__pycache__"):
                 continue
             name = nn[18:]
-            name = name[0:len(name)-3]
+            name = name[0:len(name) - 3]
             rule_m = load_names(f"gatehouse.rules.{name}")
             rule = getattr(rule_m, "export_rule")(self.consul)
             self.rules.append(rule)
@@ -84,7 +84,7 @@ class Gatehouse:
                         res = True
                         checks[rule.name] = res
                     await self.out_queue.append(res, cid)
-                    te = (time.perf_counter_ns() / 1000000) - ts / 1000000
+                    te = (time.perf_counter_ns() - ts) / 1000000
                     sentry_sdk.set_measurement('redis_command_exec', te, 'miliseconds')
                     sentry_sdk.metrics.distribution(
                         key="gatehouse_handling_duration",

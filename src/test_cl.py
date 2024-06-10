@@ -1,5 +1,5 @@
 #
-#  Copyright (C) 2024. Lovania
+#  Copyright (C) 2024-present Lovania
 #
 
 import asyncio
@@ -26,6 +26,7 @@ async def main():
 
     for _ in range(100):
         threading.Thread(target=send_data, args=(hiredis.pack_command(("HEARTBEAT",)),)).start()
+
 
 if __name__ == '__main__':
     asyncio.run(main())

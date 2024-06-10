@@ -11,10 +11,12 @@ import trio
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.socket import SocketIntegration
 
+import apex
 from src import red_db, session_structure
 from src.errors import Execution
-import apex
 from src.gatehouse.gatehouse import Gatehouse
+from src.middleware.middleware import Middleware
+from src.middleware.serialisation import ReaderMIL, SerialiserMIL
 
 
 class SupremeConsul:
@@ -57,6 +59,8 @@ class SupremeConsul:
             self.nursery.start_soon(self.gh.starter)
 
             self.cache = apex.LRUCache(self.config["caching"]["size"])
+
+            self.middleware = Middleware(ReaderMIL(), SerialiserMIL())
 
             trio.lowlevel.spawn_system_task(self.wt.watchman)
         return self

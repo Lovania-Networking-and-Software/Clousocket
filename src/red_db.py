@@ -2,13 +2,12 @@
 #  Copyright (C) 2024-present Lovania
 #
 
-import math
 import time
 import uuid
 
-import trio
 import redio
 import sentry_sdk
+import trio
 
 from src.utils import IOQueue
 

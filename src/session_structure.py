@@ -88,21 +88,10 @@ class Session:
     async def io(self):
         async for message in self.proto:
             with sentry_sdk.start_transaction(
-                op="function", description="Process data (I/O)"
+                    op="function", description="Process data (I/O)"
             ):
-                if message == b"":
-                    break
-                with sentry_sdk.start_span(
-                    op="serialize", description="Convert bytes to JSON"
-                ) as spn:
-                    ts = time.perf_counter_ns()
-                    self.parser.feed(message)
-                    message = self.parser.gets()
-                    te = time.perf_counter_ns()
-                    spn.set_measurement(
-                        "serialisation", (te - ts) / 1000000, "miliseconds"
-                    )
-                if message[0].decode("utf-8") == "HEARTBEAT":
+                req = await self.consul.middleware.handle(message)
+                if req.this == "HEARTBEAT":
                     self.heartbeat_future.set()
                     continue
                 self.ht_base.last_activity_ts = time.perf_counter()

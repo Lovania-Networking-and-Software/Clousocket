@@ -1,6 +1,7 @@
 #
 #  Copyright (C) 2024-present Lovania
 #
+
 import trio
 
 from src.consul import SupremeConsul
