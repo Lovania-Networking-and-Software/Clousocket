@@ -22,55 +22,50 @@ from src.middleware.serialisation import ReaderMIL, SerialiserMIL
 class SupremeConsul:
 
     def __init__(self):
-        self.config: dict
-        self.sessions: dict[str, session_structure.Session] = dict[str, session_structure.Session]()
-        self.consulars: list[Consular] = list[Consular]()
+        self.config: dict = {}
+        self.sessions: dict[str, session_structure.Session] = {}
+        self.consulars: list[Consular] = []
         self.nid = uuid.uuid1()
-        self.db: red_db.RedisTPCS
-        self.ids: dict[id, id] = dict[id, id]()
-        self.nursery: typing.Union[trio.Nursery, None] = None
-        self.cache: typing.Union[apex.Cache, None] = None
+        self.db: typing.Optional[red_db.RedisTPCS] = None
+        self.ids: dict[int, int] = {}
+        self.nursery: typing.Optional[trio.Nursery] = None
+        self.cache: typing.Optional[apex.Cache] = None
 
     async def __aenter__(self):
-        async with trio.open_nursery() as self.nursery:
-            with open("../clousocket.toml", "rb") as f:
-                self.config = tomllib.load(f)
-            self.limiter = trio.CapacityLimiter(int(self.config["threading"]["thread-limit"]))
+        with open("../clousocket.toml", "rb") as f:
+            self.config = tomllib.load(f)
+        self.limiter = trio.CapacityLimiter(int(self.config["threading"]["thread-limit"]))
+        self.host = self.config["network"]["host"]
+        self.port = int(self.config["network"]["port"])
 
-            self.host = self.config["network"]["host"]
-            self.port = int(self.config["network"]["port"])
+        sentry_sdk.init(
+            dsn=self.config["sentry"]["dsn"],
+            traces_sample_rate=float(self.config["sentry"]["traces-sample-rate"]),
+            profiles_sample_rate=float(self.config["sentry"]["profiles-sample-rate"]),
+            enable_tracing=True,
+            integrations=[AsyncioIntegration(), SocketIntegration()]
+        )
 
-            sentry_sdk.init(
-                dsn=self.config["sentry"]["dsn"],
-                traces_sample_rate=float(self.config["sentry"]["traces-sample-rate"]),
-                profiles_sample_rate=float(self.config["sentry"]["profiles-sample-rate"]),
-                enable_tracing=True,
-                integrations=[
-                    AsyncioIntegration(),
-                    SocketIntegration(),
-                ]
-            )
-
+        async with trio.open_nursery() as nursery:
+            self.nursery = nursery
             self.db = red_db.RedisTPCS(self)
             self.nursery.start_soon(self.db.starter)
             self.wt = WatchTower(self)
-
             self.gh = Gatehouse(self)
             self.nursery.start_soon(self.gh.starter)
-
             self.cache = apex.LRUCache(self.config["caching"]["size"])
-
             self.middleware = Middleware(ReaderMIL(), SerialiserMIL())
-
             trio.lowlevel.spawn_system_task(self.wt.watchman)
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        sentry_sdk.get_client().close()
         await self.db.out_queue.s_channel.aclose()
         await self.db.out_queue.r_channel.aclose()
         await self.db.in_queue.s_channel.aclose()
         await self.db.in_queue.r_channel.aclose()
+        sentry_sdk.get_client().close()
+
 
     async def __aiter__(self):
         while True:
