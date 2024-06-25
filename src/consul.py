@@ -66,7 +66,6 @@ class SupremeConsul:
         await self.db.in_queue.r_channel.aclose()
         sentry_sdk.get_client().close()
 
-
     async def __aiter__(self):
         while True:
             try:
