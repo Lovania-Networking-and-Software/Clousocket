@@ -47,14 +47,37 @@ class ReqClassifier:
         }
         self.cl = GridSearchCV(self.cl, param_g, cv=5)
 
-    def prep_data(self):
+    def _append_true(self):
+        self.y.append(1)
+        self.test_y.append(1)
+
+    def _append_false(self, risk, command_cn):
+        self.x_without_outlier.append([risk, command_cn])
+        self.y.append(0)
+        self.test_y.append(0)
+
+    def _prep_ka_basic_ops(self):
         for command_cn in range(0, 3):
             for risk in range(0, 4):
                 self.x.append([risk, command_cn])
                 self.test_x.append([risk, command_cn])
-                self.x_without_outlier.append([risk, command_cn])
-                self.y.append(0)
-                self.test_y.append(0)
+                self._append_false(risk, command_cn)
+
+    def _prep_serials(self, risk, command_cn):
+        if command_cn == 3 and risk >= 7:
+            self._append_true()
+        elif command_cn == 4 and risk >= 6:
+            self._append_true()
+        elif command_cn == 5 and risk >= 5:
+            self._append_true()
+        elif command_cn == 6 and risk >= 4:
+            self._append_true()
+        elif command_cn == 7 and risk >= 3:
+            self._append_true()
+        else:
+            self._append_false(risk, command_cn)
+
+    def _prep_normal_operating_ops(self):
         for command_cn in range(3, 8):
             for risk in range(0, 11):
                 self.test_x.append([risk, command_cn])
@@ -65,42 +88,24 @@ class ReqClassifier:
                     self.test_y.append(1)
                     continue
                 self.x.append([risk, command_cn])
-                if command_cn == 3 and risk >= 7:
-                    self.y.append(1)
-                    self.test_y.append(1)
-                elif command_cn == 4 and risk >= 6:
-                    self.y.append(1)
-                    self.test_y.append(1)
-                elif command_cn == 5 and risk >= 5:
-                    self.y.append(1)
-                    self.test_y.append(1)
-                elif command_cn == 6 and risk >= 4:
-                    self.y.append(1)
-                    self.test_y.append(1)
-                elif command_cn == 7 and risk >= 3:
-                    self.y.append(1)
-                    self.test_y.append(1)
-                else:
-                    self.x_without_outlier.append([risk, command_cn])
-                    self.y.append(0)
-                    self.test_y.append(0)
+                self._prep_serials(risk, command_cn)
+
+    def _prep_server_operation_ops(self):
         for command_cn in range(8, 11):
             for risk in range(0, 11):
                 self.test_x.append([risk, command_cn])
                 self.x.append([risk, command_cn])
                 if command_cn == 8 and risk >= 3:
-                    self.y.append(1)
-                    self.test_y.append(1)
-                elif command_cn == 9 and risk >= 2:
-                    self.y.append(1)
-                    self.test_y.append(1)
-                elif command_cn == 10 and risk >= 2:
-                    self.y.append(1)
-                    self.test_y.append(1)
+                    self._append_true()
+                elif command_cn >= 9 and risk >= 2:
+                    self._append_true()
                 else:
-                    self.x_without_outlier.append([risk, command_cn])
-                    self.y.append(0)
-                    self.test_y.append(0)
+                    self._append_false(risk, command_cn)
+
+    def prep_data(self):
+        self._prep_ka_basic_ops()
+        self._prep_normal_operating_ops()
+        self._prep_server_operation_ops()
 
     def fit(self):
         self.cl.fit(self.x, self.y)
@@ -119,7 +124,7 @@ if __name__ == '__main__':
     y_pred_rf = a.cl.predict(a.test_x)
     f1_rf = f1_score(a.test_y, y_pred_rf)
     print(f1_rf)
-    if not res == 1.0:
+    if res != 1:
         for i, d in enumerate(a.test_x):
             y = a.cl.predict(np.array([d]))[0]
             if y == a.test_y[i]:

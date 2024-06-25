@@ -6,12 +6,12 @@ import tomllib
 import typing
 import uuid
 
+import cachebox
 import sentry_sdk
 import trio
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 from sentry_sdk.integrations.socket import SocketIntegration
 
-import apex
 from src import red_db, session_structure
 from src.errors import Execution
 from src.gatehouse.gatehouse import Gatehouse
@@ -29,7 +29,7 @@ class SupremeConsul:
         self.db: typing.Optional[red_db.RedisTPCS] = None
         self.ids: dict[int, int] = {}
         self.nursery: typing.Optional[trio.Nursery] = None
-        self.cache: typing.Optional[apex.Cache] = None
+        self.cache: typing.Optional[cachebox.Cache] = None
 
     async def __aenter__(self):
         with open("../clousocket.toml", "rb") as f:

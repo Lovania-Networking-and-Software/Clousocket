@@ -74,7 +74,7 @@ class Gatehouse:
             addr = comm[1]
             ts = time.perf_counter_ns()
             checks = dict()
-            with sentry_sdk.start_transaction(op="middleware.handle", name="Gatehouse Gate Check") as trs:
+            with sentry_sdk.start_transaction(op="middleware.handle", name="Gatehouse Gate Check"):
                 try:
                     for rule in self.rules:
                         rule_res = await rule.handle(proto, addr)

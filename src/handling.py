@@ -23,13 +23,10 @@ class Handler:
         else:
             op: typing.Awaitable = self.ops[raw_data.this]
         args = []
-        if raw_data.next == End:
-            pass
-        else:
-            while True:
-                if raw_data.next == End():
-                    break
-                elif isinstance(raw_data.next, Data):
-                    args.append(raw_data.next.this)
-                    raw_data = raw_data.next
+        while True:
+            if raw_data.next == End():
+                break
+            elif isinstance(raw_data.next, Data):
+                args.append(raw_data.next.this)
+                raw_data = raw_data.next
         await op(proto, *args)

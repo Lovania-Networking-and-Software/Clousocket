@@ -63,7 +63,7 @@ class Session:
                 await self.proto.send_all(hiredis.pack_command(("HEARTBEAT", "TIMEOUT")))
                 nursery.cancel_scope.cancel()
             except* trio.BrokenResourceError:
-                pass
+                ...
             finally:
                 await self.proto.aclose()
 
