@@ -1,3 +1,5 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Lovania-Networking-and-Software_Clousocket&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Lovania-Networking-and-Software_Clousocket)
+
 ![Clousocket](assets/clousocket.png)
 # About Clousocket
 ### What is Clousocket:
