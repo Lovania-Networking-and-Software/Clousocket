@@ -53,7 +53,7 @@ class SupremeConsul:
             self.wt = WatchTower(self)
             self.gh = Gatehouse(self)
             self.nursery.start_soon(self.gh.starter)
-            self.cache = apex.LRUCache(self.config["caching"]["size"])
+            self.cache = cachebox.LRUCache(self.config["caching"]["size"])
             self.middleware = Middleware(ReaderMIL(), SerialiserMIL())
             trio.lowlevel.spawn_system_task(self.wt.watchman)
 
