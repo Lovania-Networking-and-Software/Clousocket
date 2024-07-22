@@ -3,4 +3,4 @@ cachebox~=3.3.1
 numpy~=2.0.0
 scikit-learn~=1.5.1
 redio~=1.0.0
-hiredis~=2.3.2
+hiredis~=3.0.0
