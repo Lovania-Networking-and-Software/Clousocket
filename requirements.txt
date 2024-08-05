@@ -1,4 +1,4 @@
-trio~=0.26.0
+trio~=0.26.1
 cachebox~=3.3.1
 numpy~=2.0.0
 scikit-learn~=1.5.1
