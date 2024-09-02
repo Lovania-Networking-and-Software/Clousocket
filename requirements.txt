@@ -1,5 +1,5 @@
 trio~=0.26.2
-cachebox~=4.0.0
+cachebox~=4.1.0
 numpy~=2.0.0
 scikit-learn~=1.5.1
 redio~=1.0.0
